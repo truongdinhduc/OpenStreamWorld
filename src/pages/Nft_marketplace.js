@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 
-const nftItem = (item, btnText, price) => {
+const nftItem = (item, btnText, price, makeOffer=false) => {
     return (
     <div className='nft-item' key={item.id}>
         <div className='nft-img'>
@@ -13,11 +13,11 @@ const nftItem = (item, btnText, price) => {
         </div>:
         <div className='nft-price'>
             <img src="https://ethereum.org/static/6b935ac0e6194247347855dc3d328e83/13c43/eth-diamond-black.png" style={{height:"20px", marginRight:"5px"}} alt=""/>
-            
         </div>
         }
         <div className='sell-now-btn'>
-            <a href={price?item.permalink:item.permalink+"/sell"} target="_blank" rel="noreferrer" className='sell-now-link'>{btnText}</a>
+            {makeOffer?<a href={item.permalink} target="_blank" rel="noreferrer" className='sell-now-link'>{btnText}</a>
+            :<a href={price?item.permalink:item.permalink+"/sell"} target="_blank" rel="noreferrer" className='sell-now-link'>{btnText}</a>}
         </div>
     </div>
     )
@@ -25,32 +25,28 @@ const nftItem = (item, btnText, price) => {
 
 function Nft_marketplace(props){
 
-    async function connectWallet(){
-        if (window.ethereum) {
-            const addr = await window.ethereum.request({ method: "eth_requestAccounts" });
-            props.setAccountInfo({
-                address: String(addr), 
-                balance: 0,
-            })
-            return String(addr)
-        }
-        else alert("Install metamask extension.")
-    }
-
     const [nftList, setNftList] = useState([])
     const [sellingNfts, setSellingNfts] = useState([])
     const [notSellingNfts, setNotSellingNfts] = useState([])
 
+    useEffect(() => {
+        props.accAddr&&getNftList()
+    }, );
+
+    async function accountAddress(){
+        return props.accAddr
+    }
+
     async function getNftList(){
-        const options = {method: 'GET'};
-        //https://testnets-api.opensea.io/api/v1/assets?owner=0x05eD6b1C84e0D9Dd31322bC45bb37929535D59a9&order_direction=desc&offset=0&limit=20&include_orders=false
-        const url = "https://testnets-api.opensea.io/api/v1/assets?owner=" + await connectWallet() + "&order_direction=desc&offset=0&limit=20&include_orders=true"
+        const options = {method: 'GET'}
+        const url = "https://testnets-api.opensea.io/api/v1/assets?owner=" + await accountAddress() + "&order_direction=desc&offset=0&limit=20&include_orders=true"
         
         await fetch(url, options)
         .then(response => response.json())
         .then(response => setNftList(response.assets))
-        .catch(err => console.error(err));
+        .catch(err => console.error(err))
         //console.log(nftList)
+
         setSellingNfts(nftList.filter((x)=>{
             return x.seaport_sell_orders != null
         }))
@@ -60,9 +56,22 @@ function Nft_marketplace(props){
         }))
     }
 
-    useEffect(() => {
-        getNftList()
-    }, );
+    const [otherNFTs, setOtherNFTs] = useState([])
+
+    async function searchNfts(event){
+        event.preventDefault()
+
+        const ownerAddr = document.getElementById("owner-address").value
+        
+        const options = {method: 'GET'}
+        const url = "https://testnets-api.opensea.io/api/v1/assets?owner=" + ownerAddr + "&order_direction=desc&offset=0&limit=20&include_orders=true"
+        
+        await fetch(url, options)
+        .then(response => response.json())
+        .then(response => setOtherNFTs(response.assets))
+        .catch(err => console.error(err))
+        //console.log(otherNFTs)
+    }
 
     return (       
         <div className="nft-page">
@@ -80,6 +89,22 @@ function Nft_marketplace(props){
                 <div className='nft-list'>
                     {
                         notSellingNfts.map(x => nftItem(x, "Sell Now", false))
+                    }
+                </div>
+            </div>   
+
+            <div className='my-nft'>
+                <h1>Other NFTs</h1>
+                <form onSubmit={searchNfts}>
+                    <input type="text" placeholder="Owner address" id="owner-address"></input> 
+                    <button type="submit" id="search-nft-btn"><i className='fa fa-search'></i></button>
+                </form>
+                <div className='nft-list'>
+                    {
+                        otherNFTs&&otherNFTs.filter((x)=>{return x.seaport_sell_orders != null}).map(x => nftItem(x, "Buy Now", x.seaport_sell_orders[0].current_price))
+                    }
+                    {
+                        otherNFTs&&otherNFTs.filter((x)=>{return x.seaport_sell_orders == null}).map(x => nftItem(x, "Make Offer", false, true))
                     }
                 </div>
             </div>   

@@ -3,31 +3,21 @@ import {BrowserRouter, Routes, Route, Link } from 'react-router-dom';
 import Home from './pages/Home';
 import Nft_marketplace from './pages/Nft_marketplace';
 import CreatNFT from './pages/CreateNFT.js';
-import { useState, useEffect } from 'react';
-import { ethers }  from "ethers";
+import { useState } from 'react';
 
 function App() {
-  const [accountInfo, setAccountInfo] = useState({address: "", balance: 0});
+  const [accountAddress, setAccountAddress] = useState("");
 
   async function connectWallet(){
     if (window.ethereum) {
       const addr = await window.ethereum.request({ method: "eth_requestAccounts" });
-      const bal = await window.ethereum.request({
-        method: "eth_getBalance", 
-        params: [addr[0], "latest"] 
-      })
-      setAccountInfo({address: String(addr), balance: ethers.utils.formatEther(bal)});
+      setAccountAddress(String(addr));
     }
     else alert("Install metamask extension.")
   }
 
   window.ethereum.on('accountsChanged', async (accounts) => {
-    const addr = await window.ethereum.request({ method: "eth_requestAccounts" });
-    const bal = await window.ethereum.request({
-      method: "eth_getBalance", 
-      params: [addr[0], "latest"] 
-    })
-    setAccountInfo({address: String(addr), balance: ethers.utils.formatEther(bal)});
+    setAccountAddress(accounts[0]);
   });
 
   return (
@@ -40,17 +30,17 @@ function App() {
         <div className='menu'>
           <nav>
             <Link to="" className='link'>Home</Link>
-            {(accountInfo.address!=="")&&<Link to="/nft_marketplace" className='link'>NFT Marketplace</Link>}
+            <Link to="/nft_marketplace" className='link'>NFT Marketplace</Link>
             <Link to="/createNFT" className='link'>Create</Link>
             {
-              accountInfo.address === ""?
+              accountAddress === ""?
               <button className='connect-wallet-btn' onClick={connectWallet}>
                 Connect Wallet
               </button>
               :
               <Link to="" className='link'>
                 <i className="fa fa-user-circle-o" style={{fontSize:"20px"}}></i>
-                {" "+accountInfo.address.slice(0,5)+"..."+accountInfo.address.slice(-4)}
+                {" "+accountAddress.slice(0,5)+"..."+accountAddress.slice(-4)}
               </Link>
             }
           </nav>
@@ -58,8 +48,8 @@ function App() {
       </div>
       <Routes> 
         <Route path="" element={<Home />} /> 
-        <Route path="nft_marketplace" element={<Nft_marketplace setAccountInfo={setAccountInfo}/>} /> 
-        <Route path="createNFT" element={<CreatNFT accAddr={accountInfo.address}/>} /> 
+        <Route path="nft_marketplace" element={<Nft_marketplace accAddr={accountAddress}/>}/> 
+        <Route path="createNFT" element={<CreatNFT accAddr={accountAddress}/>}/> 
       </Routes>
     </BrowserRouter>
   );
